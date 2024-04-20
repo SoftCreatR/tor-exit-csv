@@ -1,0 +1,74 @@
+﻿name: Tor Exit Nodes Geo Data Update
+
+on:
+  push:
+    paths:
+      - 'update.sh'
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  update_geo_data:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install mmdbinspect
+      run: |
+        wget https://github.com/maxmind/mmdbinspect/releases/download/v0.2.0/mmdbinspect_0.2.0_linux_amd64.deb
+        sudo dpkg -i mmdbinspect_0.2.0_linux_amd64.deb
+
+    - name: Run update script
+      run: bash update.sh
+      id: update_script
+
+    - name: Generate CSV hash
+      if: steps.update_script.outcome == 'success'
+      run: |
+        echo "Generating hash for tor-exit.csv..."
+        SHA256SUM=$(sha256sum tor-exit.csv | awk '{print $1}')
+        echo "SHA256SUM=$SHA256SUM" >> $GITHUB_ENV
+        echo "Current Hash: $SHA256SUM"
+
+    - name: Check if CSV has changed
+      id: check_change
+      run: |
+        echo "Checking if CSV has changed..."
+        if [ -f ./.github/hashes/tor-exit.csv.sha256 ]; then
+          OLD_HASH=$(cat ./.github/hashes/tor-exit.csv.sha256)
+          echo "Old Hash: $OLD_HASH"
+          if [ "$OLD_HASH" == "$SHA256SUM" ]; then
+            echo "changed=false" >> $GITHUB_ENV
+          else
+            echo "changed=true" >> $GITHUB_ENV
+          fi
+        else
+          echo "changed=true" >> $GITHUB_ENV
+        fi
+
+    - name: Update hash
+      if: env.changed == 'true'
+      run: |
+        mkdir -p ./.github/hashes
+        echo "$SHA256SUM" > ./.github/hashes/tor-exit.csv.sha256
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        git add ./.github/hashes/tor-exit.csv.sha256
+        git commit -m "Update hash for tor-exit.csv"
+        git push
+
+    - name: Sync CSV to Gist
+      if: env.changed == 'true'
+      uses: popsiclestick/gist-sync-action@v1.2.0
+      with:
+        auth: ${{ secrets.GIST_TOKEN }}
+        gist_url: https://gist.github.com/SoftCreatR/35bf3459ec3a8d7e95f621f67f2a64e1
+        gist_title: tor-exit.csv
+        gist_description: "Tor exit nodes geo data"
+        github_file: tor-exit.csv
