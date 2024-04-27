@@ -1,5 +1,6 @@
 #!/bin/bash
 
+output_txt="tor-exit.txt"
 output_csv="tor-exit.csv"
 geoip_dir="/opt/geoip"
 
@@ -43,6 +44,9 @@ fi
 echo "IP,Network Prefix,ASN,Organization,City Name,Continent Code,Continent Name,Country ISO Code,Country Name,Is Country in European Union,Location Accuracy Radius,Location Latitude,Location Longitude,Location Time Zone,Postal Code,Registered Country ISO Code,Registered Country Name,Is Registered Country in European Union,Subdivision ISO Code,Subdivision Name" > "$output_csv"
 
 sorted_ips=$(curl -s -A $user_agent $tor_list_url | sort -V)
+
+echo "$sorted_ips" > "$output_txt"
+
 echo "$sorted_ips" | while read ip; do
     if [[ -z "$ip" ]]; then continue; fi
     city_json=$(mmdbinspect -db "$geoip_dir/GeoLite2-City.mmdb" "$ip")

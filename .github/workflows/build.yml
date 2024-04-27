@@ -72,3 +72,13 @@ jobs:
         gist_title: tor-exit.csv
         gist_description: "Tor exit nodes geo data"
         github_file: tor-exit.csv
+
+    - name: Sync CSV to Gist
+      if: env.changed == 'true'
+      uses: popsiclestick/gist-sync-action@v1.2.0
+      with:
+        auth: ${{ secrets.GIST_TOKEN }}
+        gist_url: https://gist.github.com/SoftCreatR/35bf3459ec3a8d7e95f621f67f2a64e1
+        gist_title: tor-exit
+        gist_description: "Tor exit nodes geo data"
+        github_file: tor-exit.txt
